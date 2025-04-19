@@ -20,7 +20,7 @@
   }
   
   .audio-upload,
-  .audio-controls,
+  .media-controls,
   .transcription {
     width: 80%;
     margin: 10px 0;
@@ -46,6 +46,55 @@
   
   .drop-zone:hover {
     border-color: #4CAF50;
+  }
+  
+  .media-container {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .waveform {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  
+  .video-container {
+    width: 100%;
+    margin-bottom: 20px;
+    position: relative;
+    padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  }
+  
+  .video-player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+  }
+  
+  .play-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .play-button:hover {
+    background-color: #45a049;
+  }
+  
+  .play-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
   }
   
   .scrubber {

@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podcast Transcription App</title>
+    <!-- React and ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <!-- WaveSurfer.js -->
+    <script src="https://unpkg.com/wavesurfer.js"></script>
+    <!-- Your CSS -->
+    <style>
+        .App {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .App-header {
+            background-color: #282c34;
+            color: white;
+            padding: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .App-main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px;
+        }
+        
+        .audio-upload,
+        .media-controls,
+        .transcription {
+            width: 80%;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+        
+        .drop-zone {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            background-color: #fff;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone.dragging {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        
+        .drop-zone:hover {
+            border-color: #4CAF50;
+        }
+        
+        .media-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .waveform {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .video-container {
+            width: 100%;
+            margin-bottom: 20px;
+            position: relative;
+            padding-top: 56.25%;
+        }
+        
+        .video-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+        
+        .play-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .play-button:hover {
+            background-color: #45a049;
+        }
+        
+        .play-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .transcription-text {
+            text-align: left;
+            white-space: pre-wrap;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        .transcribing-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [isDragging, setIsDragging] = React.useState(false);
+            const [selectedFile, setSelectedFile] = React.useState(null);
+            const [transcription, setTranscription] = React.useState("");
+            const [isTranscribing, setIsTranscribing] = React.useState(false);
+            const [isPlaying, setIsPlaying] = React.useState(false);
+            const [isVideo, setIsVideo] = React.useState(false);
+            const waveformRef = React.useRef(null);
+            const wavesurfer = React.useRef(null);
+            const videoRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (waveformRef.current) {
+                    wavesurfer.current = WaveSurfer.create({
+                        container: waveformRef.current,
+                        waveColor: '#4CAF50',
+                        progressColor: '#2E7D32',
+                        cursorColor: '#2E7D32',
+                        barWidth: 2,
+                        barRadius: 3,
+                        responsive: true,
+                        height: 100,
+                        normalize: true,
+                        partialRender: true
+                    });
+
+                    wavesurfer.current.on('ready', () => {
+                        console.log('Waveform is ready');
+                    });
+
+                    wavesurfer.current.on('audioprocess', () => {
+                        setIsPlaying(true);
+                    });
+
+                    wavesurfer.current.on('pause', () => {
+                        setIsPlaying(false);
+                    });
+
+                    wavesurfer.current.on('finish', () => {
+                        setIsPlaying(false);
+                    });
+                }
+
+                return () => {
+                    if (wavesurfer.current) {
+                        wavesurfer.current.destroy();
+                    }
+                };
+            }, []);
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                
+                const file = e.dataTransfer.files[0];
+                if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+                    setSelectedFile(file);
+                    setIsVideo(file.type.startsWith('video/'));
+                    handleFileLoad(file);
+                } else {
+                    alert('Please upload an audio or video file');
+                }
+            };
+
+            const handleFileSelect = (e) => {
+                const file = e.target.files[0];
+                if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+                    setSelectedFile(file);
+                    setIsVideo(file.type.startsWith('video/'));
+                    handleFileLoad(file);
+                } else {
+                    alert('Please upload an audio or video file');
+                }
+            };
+
+            const handleFileLoad = (file) => {
+                const mediaUrl = URL.createObjectURL(file);
+                if (isVideo) {
+                    if (videoRef.current) {
+                        videoRef.current.src = mediaUrl;
+                    }
+                } else {
+                    if (wavesurfer.current) {
+                        wavesurfer.current.load(mediaUrl);
+                    }
+                }
+                startTranscription(file);
+            };
+
+            const togglePlayPause = () => {
+                if (isVideo) {
+                    if (videoRef.current) {
+                        if (videoRef.current.paused) {
+                            videoRef.current.play();
+                            setIsPlaying(true);
+                        } else {
+                            videoRef.current.pause();
+                            setIsPlaying(false);
+                        }
+                    }
+                } else {
+                    if (wavesurfer.current) {
+                        wavesurfer.current.playPause();
+                    }
+                }
+            };
+
+            const startTranscription = async (file) => {
+                setIsTranscribing(true);
+                setTranscription("Transcribing...");
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const response = await fetch('http://localhost:3001/transcribe', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Transcription failed');
+                    }
+
+                    const data = await response.json();
+                    setTranscription(data.transcription);
+                } catch (error) {
+                    setTranscription("Error during transcription. Please try again.");
+                    console.error("Transcription error:", error);
+                } finally {
+                    setIsTranscribing(false);
+                }
+            };
+
+            return (
+                <div className="App">
+                    <header className="App-header">
+                        Podcast to Transcribe Explanation
+                    </header>
+                    <main className="App-main">
+                        <div className="audio-upload">
+                            <h2>Media File Drop</h2>
+                            <div 
+                                className={`drop-zone ${isDragging ? 'dragging' : ''}`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                onClick={() => document.getElementById('file-input').click()}
+                            >
+                                {selectedFile ? (
+                                    <p>Selected file: {selectedFile.name}</p>
+                                ) : (
+                                    <p>Drag and drop an audio or video file here or click to upload.</p>
+                                )}
+                                <input
+                                    id="file-input"
+                                    type="file"
+                                    accept="audio/*,video/*"
+                                    onChange={handleFileSelect}
+                                    style={{ display: 'none' }}
+                                />
+                            </div>
+                        </div>
+                        <div className="media-controls">
+                            <h2>{isVideo ? 'Video Player' : 'Audio Waveform'}</h2>
+                            <div className="media-container">
+                                {isVideo ? (
+                                    <div className="video-container">
+                                        <video
+                                            ref={videoRef}
+                                            className="video-player"
+                                            controls={false}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div ref={waveformRef} className="waveform"></div>
+                                )}
+                                <button 
+                                    className="play-button"
+                                    onClick={togglePlayPause}
+                                    disabled={!selectedFile}
+                                >
+                                    {isPlaying ? 'Pause' : 'Play'}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="transcription">
+                            <h2>Transcribed Text</h2>
+                            <div className="transcription-text">
+                                {isTranscribing ? (
+                                    <div className="transcribing-indicator">
+                                        <p>Transcribing...</p>
+                                        <div className="loading-spinner"></div>
+                                    </div>
+                                ) : (
+                                    <p>{transcription || "No transcription available. Upload a file to begin."}</p>
+                                )}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html> 
