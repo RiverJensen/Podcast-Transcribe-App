@@ -1,0 +1,88 @@
+.App {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .App-header {
+    background-color: #282c34;
+    color: white;
+    padding: 20px;
+    font-size: 1.5rem;
+  }
+  
+  .App-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 20px;
+  }
+  
+  .audio-upload,
+  .audio-controls,
+  .transcription {
+    width: 80%;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #f9f9f9;
+  }
+  
+  .drop-zone {
+    border: 2px dashed #ccc;
+    padding: 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    transition: all 0.3s ease;
+  }
+  
+  .drop-zone.dragging {
+    border-color: #4CAF50;
+    background-color: #e8f5e9;
+  }
+  
+  .drop-zone:hover {
+    border-color: #4CAF50;
+  }
+  
+  .scrubber {
+    margin-top: 10px;
+  }
+  
+  .transcription-text {
+    text-align: left;
+    white-space: pre-wrap;
+    padding: 15px;
+    background-color: white;
+    border-radius: 5px;
+    min-height: 100px;
+    max-height: 400px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  .transcribing-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-top: 10px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
