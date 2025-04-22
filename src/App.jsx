@@ -124,10 +124,20 @@ function App() {
     setTranscription("Transcribing...");
     
     try {
-      // Here you would integrate with your transcription service
-      // For now, we'll simulate a transcription
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setTranscription("This is a sample transcription. In a real app, this would be the actual transcribed text from your audio/video file.");
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:3001/transcribe', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Transcription failed');
+      }
+
+      const data = await response.json();
+      setTranscription(data.transcription);
     } catch (error) {
       setTranscription("Error during transcription. Please try again.");
       console.error("Transcription error:", error);
