@@ -7,8 +7,6 @@
     <!-- React and ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- React Router -->
-    <script src="https://unpkg.com/react-router-dom@6.11.2/dist/umd/react-router-dom.production.min.js"></script>
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <!-- WaveSurfer.js -->
@@ -235,13 +233,27 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // Using React Router
-        const { BrowserRouter, Routes, Route, useNavigate } = ReactRouterDOM;
+        // Main App Component
+        function App() {
+            const [currentPage, setCurrentPage] = React.useState('landing');
+            
+            // Navigate function for changing pages
+            const navigate = (page) => {
+                setCurrentPage(page);
+            };
+            
+            // Return the appropriate page component based on current page state
+            return (
+                <div>
+                    {currentPage === 'landing' && <LandingPage navigate={navigate} />}
+                    {currentPage === 'editor' && <EditorPage navigate={navigate} />}
+                </div>
+            );
+        }
         
         // Landing Page Component
-        function LandingPage() {
+        function LandingPage({ navigate }) {
             const [isDragging, setIsDragging] = React.useState(false);
-            const navigate = useNavigate();
             
             const handleDragOver = (e) => {
                 e.preventDefault();
@@ -259,7 +271,7 @@
                 
                 const file = e.dataTransfer.files[0];
                 if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
-                    // Navigate to editor with file data
+                    // Store file data in session storage
                     sessionStorage.setItem('uploadedFile', JSON.stringify({
                         name: file.name,
                         type: file.type,
@@ -272,7 +284,7 @@
                     sessionStorage.setItem('uploadedFileUrl', blobUrl);
                     
                     // Navigate to editor
-                    navigate('/editor');
+                    navigate('editor');
                 } else {
                     alert('Please upload an audio or video file');
                 }
@@ -281,7 +293,7 @@
             const handleFileSelect = (e) => {
                 const file = e.target.files[0];
                 if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
-                    // Navigate to editor with file data
+                    // Store file data in session storage
                     sessionStorage.setItem('uploadedFile', JSON.stringify({
                         name: file.name,
                         type: file.type,
@@ -294,7 +306,7 @@
                     sessionStorage.setItem('uploadedFileUrl', blobUrl);
                     
                     // Navigate to editor
-                    navigate('/editor');
+                    navigate('editor');
                 } else {
                     alert('Please upload an audio or video file');
                 }
@@ -346,7 +358,7 @@
         }
         
         // Editor Page Component
-        function EditorPage() {
+        function EditorPage({ navigate }) {
             const [selectedFile, setSelectedFile] = React.useState(null);
             const [transcription, setTranscription] = React.useState("");
             const [isTranscribing, setIsTranscribing] = React.useState(false);
@@ -355,7 +367,6 @@
             const waveformRef = React.useRef(null);
             const wavesurfer = React.useRef(null);
             const videoRef = React.useRef(null);
-            const navigate = useNavigate();
             
             React.useEffect(() => {
                 // Check if we have a file from session storage
@@ -364,7 +375,7 @@
                 
                 if (!storedFile || !storedFileUrl) {
                     // Redirect back to landing if no file
-                    navigate('/');
+                    navigate('landing');
                     return;
                 }
                 
@@ -494,7 +505,7 @@
                 sessionStorage.removeItem('uploadedFile');
                 sessionStorage.removeItem('uploadedFileUrl');
                 // Navigate back to home
-                navigate('/');
+                navigate('landing');
             };
 
             return (
@@ -545,18 +556,6 @@
                         </div>
                     </main>
                 </div>
-            );
-        }
-        
-        // Main App Component
-        function App() {
-            return (
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/editor" element={<EditorPage />} />
-                    </Routes>
-                </BrowserRouter>
             );
         }
 
