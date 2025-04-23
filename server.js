@@ -18,11 +18,6 @@ app.use(express.json());
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve the index.html file at the root route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // Handle file upload and transcription
 app.post('/transcribe', upload.single('file'), async (req, res) => {
     try {
@@ -52,6 +47,11 @@ app.post('/transcribe', upload.single('file'), async (req, res) => {
         
         res.status(500).json({ error: 'Transcription failed', details: error.message });
     }
+});
+
+// For any other routes, serve the index.html file for client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;

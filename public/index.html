@@ -7,17 +7,28 @@
     <!-- React and ReactDOM CDN -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- React Router -->
+    <script src="https://unpkg.com/react-router-dom@6.11.2/dist/umd/react-router-dom.production.min.js"></script>
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <!-- WaveSurfer.js -->
     <script src="https://unpkg.com/wavesurfer.js"></script>
     <!-- Your CSS -->
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        
         .App {
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 0;
             padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         
         .App-header {
@@ -32,6 +43,78 @@
             flex-direction: column;
             align-items: center;
             margin: 20px;
+            flex: 1;
+        }
+        
+        .landing-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .app-description {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .app-description h1 {
+            color: #282c34;
+            margin-bottom: 20px;
+        }
+        
+        .app-description p {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 20px;
+        }
+        
+        .features-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .features-list li {
+            padding: 10px 0;
+            font-size: 1.1rem;
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .features-list li:before {
+            content: "✓";
+            color: #4CAF50;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .drop-zone-landing {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f9f9f9;
+            width: 80%;
+            max-width: 500px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .drop-zone-landing:hover, .drop-zone-landing.dragging {
+            border-color: #4CAF50;
+            background-color: #e8f5e9;
+        }
+        
+        .drop-zone-landing p {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
         }
         
         .audio-upload,
@@ -149,12 +232,121 @@
     </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
 
     <script type="text/babel">
-        function App() {
+        // Using React Router
+        const { BrowserRouter, Routes, Route, useNavigate } = ReactRouterDOM;
+        
+        // Landing Page Component
+        function LandingPage() {
             const [isDragging, setIsDragging] = React.useState(false);
+            const navigate = useNavigate();
+            
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                
+                const file = e.dataTransfer.files[0];
+                if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+                    // Navigate to editor with file data
+                    sessionStorage.setItem('uploadedFile', JSON.stringify({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        lastModified: file.lastModified
+                    }));
+                    
+                    // Create a blob URL and store it
+                    const blobUrl = URL.createObjectURL(file);
+                    sessionStorage.setItem('uploadedFileUrl', blobUrl);
+                    
+                    // Navigate to editor
+                    navigate('/editor');
+                } else {
+                    alert('Please upload an audio or video file');
+                }
+            };
+
+            const handleFileSelect = (e) => {
+                const file = e.target.files[0];
+                if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+                    // Navigate to editor with file data
+                    sessionStorage.setItem('uploadedFile', JSON.stringify({
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        lastModified: file.lastModified
+                    }));
+                    
+                    // Create a blob URL and store it
+                    const blobUrl = URL.createObjectURL(file);
+                    sessionStorage.setItem('uploadedFileUrl', blobUrl);
+                    
+                    // Navigate to editor
+                    navigate('/editor');
+                } else {
+                    alert('Please upload an audio or video file');
+                }
+            };
+            
+            return (
+                <div className="App">
+                    <header className="App-header">
+                        Podcast Transcription App
+                    </header>
+                    <main className="App-main">
+                        <div className="landing-page">
+                            <div className="app-description">
+                                <h1>Transform Your Media with AI Transcription</h1>
+                                <p>
+                                    Our powerful podcast transcription tool converts your audio and video files 
+                                    into accurate text using OpenAI's Whisper technology.
+                                </p>
+                                
+                                <ul className="features-list">
+                                    <li>Supports both audio and video files</li>
+                                    <li>Visualize audio waveforms</li>
+                                    <li>Fast and accurate AI-powered transcription</li>
+                                    <li>Simple and intuitive interface</li>
+                                </ul>
+                            </div>
+                            
+                            <div 
+                                className={`drop-zone-landing ${isDragging ? 'dragging' : ''}`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                onClick={() => document.getElementById('file-input-landing').click()}
+                            >
+                                <p>Drag and drop an audio or video file here</p>
+                                <p>or click to upload</p>
+                                <input
+                                    id="file-input-landing"
+                                    type="file"
+                                    accept="audio/*,video/*"
+                                    onChange={handleFileSelect}
+                                    style={{ display: 'none' }}
+                                />
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+        
+        // Editor Page Component
+        function EditorPage() {
             const [selectedFile, setSelectedFile] = React.useState(null);
             const [transcription, setTranscription] = React.useState("");
             const [isTranscribing, setIsTranscribing] = React.useState(false);
@@ -163,8 +355,37 @@
             const waveformRef = React.useRef(null);
             const wavesurfer = React.useRef(null);
             const videoRef = React.useRef(null);
-
+            const navigate = useNavigate();
+            
             React.useEffect(() => {
+                // Check if we have a file from session storage
+                const storedFile = sessionStorage.getItem('uploadedFile');
+                const storedFileUrl = sessionStorage.getItem('uploadedFileUrl');
+                
+                if (!storedFile || !storedFileUrl) {
+                    // Redirect back to landing if no file
+                    navigate('/');
+                    return;
+                }
+                
+                const fileData = JSON.parse(storedFile);
+                setSelectedFile(fileData);
+                setIsVideo(fileData.type.startsWith('video/'));
+                
+                // Load media
+                if (fileData.type.startsWith('video/')) {
+                    if (videoRef.current) {
+                        videoRef.current.src = storedFileUrl;
+                    }
+                } else {
+                    initWaveSurfer();
+                }
+                
+                // Start transcription
+                startTranscription(storedFileUrl);
+            }, []);
+            
+            const initWaveSurfer = () => {
                 if (waveformRef.current) {
                     wavesurfer.current = WaveSurfer.create({
                         container: waveformRef.current,
@@ -194,63 +415,23 @@
                     wavesurfer.current.on('finish', () => {
                         setIsPlaying(false);
                     });
+                    
+                    // Load the file
+                    const storedFileUrl = sessionStorage.getItem('uploadedFileUrl');
+                    if (storedFileUrl) {
+                        wavesurfer.current.load(storedFileUrl);
+                    }
                 }
-
+            };
+            
+            React.useEffect(() => {
                 return () => {
+                    // Clean up
                     if (wavesurfer.current) {
                         wavesurfer.current.destroy();
                     }
                 };
             }, []);
-
-            const handleDragOver = (e) => {
-                e.preventDefault();
-                setIsDragging(true);
-            };
-
-            const handleDragLeave = (e) => {
-                e.preventDefault();
-                setIsDragging(false);
-            };
-
-            const handleDrop = (e) => {
-                e.preventDefault();
-                setIsDragging(false);
-                
-                const file = e.dataTransfer.files[0];
-                if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
-                    setSelectedFile(file);
-                    setIsVideo(file.type.startsWith('video/'));
-                    handleFileLoad(file);
-                } else {
-                    alert('Please upload an audio or video file');
-                }
-            };
-
-            const handleFileSelect = (e) => {
-                const file = e.target.files[0];
-                if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
-                    setSelectedFile(file);
-                    setIsVideo(file.type.startsWith('video/'));
-                    handleFileLoad(file);
-                } else {
-                    alert('Please upload an audio or video file');
-                }
-            };
-
-            const handleFileLoad = (file) => {
-                const mediaUrl = URL.createObjectURL(file);
-                if (isVideo) {
-                    if (videoRef.current) {
-                        videoRef.current.src = mediaUrl;
-                    }
-                } else {
-                    if (wavesurfer.current) {
-                        wavesurfer.current.load(mediaUrl);
-                    }
-                }
-                startTranscription(file);
-            };
 
             const togglePlayPause = () => {
                 if (isVideo) {
@@ -270,24 +451,35 @@
                 }
             };
 
-            const startTranscription = async (file) => {
+            const startTranscription = async (fileUrl) => {
                 setIsTranscribing(true);
                 setTranscription("Transcribing...");
                 
                 try {
+                    // Fetch the file as a blob from the blob URL
+                    const response = await fetch(fileUrl);
+                    const blob = await response.blob();
+                    
+                    // Create a new File object
+                    const fileData = JSON.parse(sessionStorage.getItem('uploadedFile'));
+                    const file = new File([blob], fileData.name, { 
+                        type: fileData.type,
+                        lastModified: fileData.lastModified
+                    });
+                    
                     const formData = new FormData();
                     formData.append('file', file);
 
-                    const response = await fetch('/transcribe', {
+                    const apiResponse = await fetch('/transcribe', {
                         method: 'POST',
                         body: formData
                     });
 
-                    if (!response.ok) {
+                    if (!apiResponse.ok) {
                         throw new Error('Transcription failed');
                     }
 
-                    const data = await response.json();
+                    const data = await apiResponse.json();
                     setTranscription(data.transcription);
                 } catch (error) {
                     setTranscription("Error during transcription. Please try again.");
@@ -296,36 +488,25 @@
                     setIsTranscribing(false);
                 }
             };
+            
+            const handleBackToHome = () => {
+                // Clear session storage
+                sessionStorage.removeItem('uploadedFile');
+                sessionStorage.removeItem('uploadedFileUrl');
+                // Navigate back to home
+                navigate('/');
+            };
 
             return (
                 <div className="App">
                     <header className="App-header">
-                        Podcast to Transcribe Explanation
+                        Podcast Transcription Editor
                     </header>
                     <main className="App-main">
-                        <div className="audio-upload">
-                            <h2>Media File Drop</h2>
-                            <div 
-                                className={`drop-zone ${isDragging ? 'dragging' : ''}`}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                                onClick={() => document.getElementById('file-input').click()}
-                            >
-                                {selectedFile ? (
-                                    <p>Selected file: {selectedFile.name}</p>
-                                ) : (
-                                    <p>Drag and drop an audio or video file here or click to upload.</p>
-                                )}
-                                <input
-                                    id="file-input"
-                                    type="file"
-                                    accept="audio/*,video/*"
-                                    onChange={handleFileSelect}
-                                    style={{ display: 'none' }}
-                                />
-                            </div>
-                        </div>
+                        <button className="play-button" onClick={handleBackToHome} style={{ marginBottom: '20px' }}>
+                            ← Back to Home
+                        </button>
+                        
                         <div className="media-controls">
                             <h2>{isVideo ? 'Video Player' : 'Audio Waveform'}</h2>
                             <div className="media-container">
@@ -358,12 +539,24 @@
                                         <div className="loading-spinner"></div>
                                     </div>
                                 ) : (
-                                    <p>{transcription || "No transcription available. Upload a file to begin."}</p>
+                                    <p>{transcription || "No transcription available."}</p>
                                 )}
                             </div>
                         </div>
                     </main>
                 </div>
+            );
+        }
+        
+        // Main App Component
+        function App() {
+            return (
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/editor" element={<EditorPage />} />
+                    </Routes>
+                </BrowserRouter>
             );
         }
 
