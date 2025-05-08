@@ -5,9 +5,8 @@ const path = require('path');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-const crypto = require('crypto');
-const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const transcriptionService = require('../services/transcriptionService');
 
 // Configure ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -21,26 +20,6 @@ const openai = new OpenAI({
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// FastAPI server URL
-const FASTAPI_URL = 'http://localhost:8000';
-
-/**
- * Save transcription to FastAPI server
- * @param {Object} transcriptionData - The transcription data object
- * @returns {Promise} - Promise with the response from FastAPI server
- */
-async function saveTranscriptionToAPI(transcriptionData) {
-    try {
-        const response = await axios.post(`${FASTAPI_URL}/transcriptions`, transcriptionData);
-        console.log('Transcription saved to API:', response.data.id);
-        return response.data;
-    } catch (error) {
-        console.error('Error saving transcription to API:', error.message);
-        // Continue execution even if API save fails
-        return null;
-    }
 }
 
 /**
@@ -85,18 +64,20 @@ exports.transcribeAudio = async (req, res) => {
         const transcriptionId = uuidv4();
         
         // Create transcription data object
-        const now = new Date();
+        const now = new Date().toISOString();
         const transcriptionData = {
             id: transcriptionId,
             title: req.file.originalname,
             source_type: "file",
             source_name: req.file.originalname,
             text: transcription.text,
-            timestamp: now.toISOString()
+            created_at: now,
+            file_type: req.file.mimetype,
+            file_size: req.file.size
         };
 
-        // Save to FastAPI server
-        await saveTranscriptionToAPI(transcriptionData);
+        // Save to Supabase
+        const savedTranscription = await transcriptionService.saveTranscription(transcriptionData);
 
         // Clean up - delete the uploaded file after processing
         fs.unlinkSync(req.file.path);
@@ -218,18 +199,21 @@ exports.transcribeYouTube = async (req, res) => {
         const transcriptionId = uuidv4();
         
         // Create transcription data object
-        const now = new Date();
+        const now = new Date().toISOString();
         const transcriptionData = {
             id: transcriptionId,
             title: videoTitle,
             source_type: "youtube",
             source_name: youtubeUrl,
             text: transcription.text,
-            timestamp: now.toISOString()
+            created_at: now,
+            video_id: info.videoDetails.videoId,
+            duration: videoDurationSec,
+            author: info.videoDetails.author.name
         };
 
-        // Save to FastAPI server
-        await saveTranscriptionToAPI(transcriptionData);
+        // Save to Supabase
+        const savedTranscription = await transcriptionService.saveTranscription(transcriptionData);
 
         // Clean up the temporary file
         fs.unlinkSync(tempFilePath);
@@ -264,6 +248,105 @@ exports.transcribeYouTube = async (req, res) => {
         res.status(500).json({ 
             error: errorMessage, 
             details: errorDetails 
+        });
+    }
+};
+
+/**
+ * Get all transcriptions
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getAllTranscriptions = async (req, res) => {
+    try {
+        // Get optional filter parameters
+        const { source_type } = req.query;
+        
+        // Get transcriptions from Supabase with optional filters
+        const transcriptions = await transcriptionService.getAllTranscriptions({
+            source_type: source_type
+        });
+        
+        res.json(transcriptions);
+    } catch (error) {
+        console.error('Error getting transcriptions:', error);
+        res.status(500).json({ 
+            error: 'Failed to retrieve transcriptions', 
+            details: error.message 
+        });
+    }
+};
+
+/**
+ * Get a single transcription by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getTranscription = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Get transcription from Supabase
+        const transcription = await transcriptionService.getTranscription(id);
+        
+        if (!transcription) {
+            return res.status(404).json({ error: 'Transcription not found' });
+        }
+        
+        res.json(transcription);
+    } catch (error) {
+        console.error(`Error getting transcription ${req.params.id}:`, error);
+        res.status(500).json({ 
+            error: 'Failed to retrieve transcription', 
+            details: error.message 
+        });
+    }
+};
+
+/**
+ * Delete a transcription by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.deleteTranscription = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Delete from Supabase
+        await transcriptionService.deleteTranscription(id);
+        
+        res.json({ message: `Transcription ${id} deleted successfully` });
+    } catch (error) {
+        console.error(`Error deleting transcription ${req.params.id}:`, error);
+        res.status(500).json({ 
+            error: 'Failed to delete transcription', 
+            details: error.message 
+        });
+    }
+};
+
+/**
+ * Search transcriptions by content
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.searchTranscriptions = async (req, res) => {
+    try {
+        const { q } = req.query;
+        
+        if (!q) {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+        
+        // Search transcriptions in Supabase
+        const results = await transcriptionService.searchTranscriptions(q);
+        
+        res.json(results);
+    } catch (error) {
+        console.error('Error searching transcriptions:', error);
+        res.status(500).json({ 
+            error: 'Failed to search transcriptions', 
+            details: error.message 
         });
     }
 }; 

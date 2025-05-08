@@ -212,21 +212,141 @@ function App() {
     }
   };
 
-  // Get the API URL for a transcription
-  const getApiUrl = (id) => {
-    return `http://localhost:8000/transcriptions/${id}`;
+  // Get all transcriptions
+  const getAllTranscriptions = async () => {
+    try {
+      const response = await fetch('http://localhost:3002/api/transcription');
+      if (!response.ok) {
+        throw new Error('Failed to fetch transcriptions');
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching transcriptions:', error);
+      return [];
+    }
   };
 
-  // Open the transcription in a new window
-  const viewTranscriptionAPI = () => {
-    if (transcriptionId) {
-      window.open(getApiUrl(transcriptionId), '_blank');
+  // Get a single transcription by ID
+  const getTranscription = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:3002/api/transcription/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch transcription');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching transcription ${id}:`, error);
+      return null;
     }
   };
 
   // View all transcriptions
-  const viewAllTranscriptions = () => {
-    window.open('http://localhost:8000/transcriptions', '_blank');
+  const viewAllTranscriptions = async () => {
+    try {
+      const transcriptions = await getAllTranscriptions();
+      
+      // Create a new window with formatted transcriptions list
+      const newWindow = window.open('', '_blank');
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>All Transcriptions</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              h1 { color: #333; }
+              .transcription-item { 
+                margin-bottom: 20px; 
+                padding: 15px; 
+                border: 1px solid #ddd; 
+                border-radius: 5px;
+              }
+              .title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+              .meta { color: #666; font-size: 14px; margin-bottom: 10px; }
+              .preview { color: #333; }
+              .view-btn {
+                padding: 5px 10px;
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 3px;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-block;
+                margin-top: 10px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>All Transcriptions</h1>
+            ${transcriptions.length === 0 ? '<p>No transcriptions found.</p>' : 
+              transcriptions.map(t => `
+                <div class="transcription-item">
+                  <div class="title">${t.title || 'Untitled'}</div>
+                  <div class="meta">
+                    Source: ${t.source_type} | Date: ${new Date(t.created_at).toLocaleString()}
+                  </div>
+                  <div class="preview">
+                    ${t.text.substring(0, 150)}${t.text.length > 150 ? '...' : ''}
+                  </div>
+                  <a href="http://localhost:3002/api/transcription/${t.id}" target="_blank" class="view-btn">
+                    View Full Transcription
+                  </a>
+                </div>
+              `).join('')
+            }
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+    } catch (error) {
+      console.error('Error displaying transcriptions:', error);
+      alert('Failed to load transcriptions. See console for details.');
+    }
+  };
+
+  // View a single transcription in a new window
+  const viewTranscription = async () => {
+    if (!transcriptionId) return;
+    
+    try {
+      const data = await getTranscription(transcriptionId);
+      if (!data) {
+        throw new Error('Transcription not found');
+      }
+      
+      // Open a new window with formatted transcription
+      const newWindow = window.open('', '_blank');
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>${data.title || 'Transcription'}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; max-width: 800px; line-height: 1.6; }
+              h1 { color: #333; }
+              .meta { color: #666; margin-bottom: 20px; }
+              .text { white-space: pre-wrap; }
+            </style>
+          </head>
+          <body>
+            <h1>${data.title || 'Transcription'}</h1>
+            <div class="meta">
+              <p><strong>Source:</strong> ${data.source_type}</p>
+              <p><strong>Date:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+              ${data.source_type === 'youtube' ? 
+                `<p><strong>YouTube:</strong> <a href="${data.source_name}" target="_blank">${data.source_name}</a></p>` : 
+                `<p><strong>File:</strong> ${data.source_name}</p>`
+              }
+            </div>
+            <div class="text">${data.text}</div>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+    } catch (error) {
+      console.error('Error displaying transcription:', error);
+      alert('Failed to load transcription. See console for details.');
+    }
   };
 
   return (
@@ -325,8 +445,8 @@ function App() {
                       Transcription ID: <code>{transcriptionId}</code>
                     </p>
                     <div className="api-buttons">
-                      <button onClick={viewTranscriptionAPI} className="api-button">
-                        View this Transcription API
+                      <button onClick={viewTranscription} className="api-button">
+                        View This Transcription
                       </button>
                       <button onClick={viewAllTranscriptions} className="api-button">
                         View All Transcriptions
