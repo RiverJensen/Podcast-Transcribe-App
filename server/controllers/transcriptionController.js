@@ -5,6 +5,9 @@ const path = require('path');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
+const crypto = require('crypto');
+const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 
 // Configure ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegPath);
@@ -18,6 +21,26 @@ const openai = new OpenAI({
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// FastAPI server URL
+const FASTAPI_URL = 'http://localhost:8000';
+
+/**
+ * Save transcription to FastAPI server
+ * @param {Object} transcriptionData - The transcription data object
+ * @returns {Promise} - Promise with the response from FastAPI server
+ */
+async function saveTranscriptionToAPI(transcriptionData) {
+    try {
+        const response = await axios.post(`${FASTAPI_URL}/transcriptions`, transcriptionData);
+        console.log('Transcription saved to API:', response.data.id);
+        return response.data;
+    } catch (error) {
+        console.error('Error saving transcription to API:', error.message);
+        // Continue execution even if API save fails
+        return null;
+    }
 }
 
 /**
@@ -58,12 +81,32 @@ exports.transcribeAudio = async (req, res) => {
         // Race the transcription against the timeout
         const transcription = await Promise.race([transcriptionPromise, timeoutPromise]);
 
+        // Generate a unique ID for the transcription
+        const transcriptionId = uuidv4();
+        
+        // Create transcription data object
+        const now = new Date();
+        const transcriptionData = {
+            id: transcriptionId,
+            title: req.file.originalname,
+            source_type: "file",
+            source_name: req.file.originalname,
+            text: transcription.text,
+            timestamp: now.toISOString()
+        };
+
+        // Save to FastAPI server
+        await saveTranscriptionToAPI(transcriptionData);
+
         // Clean up - delete the uploaded file after processing
         fs.unlinkSync(req.file.path);
 
         // Return the transcription
         console.log('Transcription successful, returning text');
-        res.json({ transcription: transcription.text });
+        res.json({ 
+            transcription: transcription.text,
+            transcriptionId: transcriptionId
+        });
     } catch (error) {
         console.error('Transcription error details:', error);
         
@@ -171,6 +214,23 @@ exports.transcribeYouTube = async (req, res) => {
             model: "whisper-1",
         });
 
+        // Generate a unique ID for the transcription
+        const transcriptionId = uuidv4();
+        
+        // Create transcription data object
+        const now = new Date();
+        const transcriptionData = {
+            id: transcriptionId,
+            title: videoTitle,
+            source_type: "youtube",
+            source_name: youtubeUrl,
+            text: transcription.text,
+            timestamp: now.toISOString()
+        };
+
+        // Save to FastAPI server
+        await saveTranscriptionToAPI(transcriptionData);
+
         // Clean up the temporary file
         fs.unlinkSync(tempFilePath);
 
@@ -178,7 +238,8 @@ exports.transcribeYouTube = async (req, res) => {
         console.log('YouTube transcription successful, returning text');
         res.json({
             transcription: transcription.text,
-            videoTitle: videoTitle
+            videoTitle: videoTitle,
+            transcriptionId: transcriptionId
         });
     } catch (error) {
         console.error('YouTube transcription error:', error);

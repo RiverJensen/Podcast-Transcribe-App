@@ -1,0 +1,5 @@
+# Ignore all transcription JSON files
+*.json
+
+# But keep the directory structure
+!.gitignore 

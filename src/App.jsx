@@ -7,6 +7,7 @@ function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [transcription, setTranscription] = useState("");
+  const [transcriptionId, setTranscriptionId] = useState(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
@@ -124,6 +125,7 @@ function App() {
   const startTranscription = async (file) => {
     setIsTranscribing(true);
     setTranscription("Transcribing...");
+    setTranscriptionId(null);
     
     try {
       const formData = new FormData();
@@ -140,6 +142,9 @@ function App() {
 
       const data = await response.json();
       setTranscription(data.transcription);
+      if (data.transcriptionId) {
+        setTranscriptionId(data.transcriptionId);
+      }
     } catch (error) {
       setTranscription("Error during transcription. Please try again.");
       console.error("Transcription error:", error);
@@ -169,6 +174,7 @@ function App() {
     setProcessingYoutube(true);
     setIsTranscribing(true);
     setTranscription("Processing YouTube video and transcribing...");
+    setTranscriptionId(null);
 
     try {
       const response = await fetch('http://localhost:3002/api/transcription/youtube', {
@@ -185,13 +191,17 @@ function App() {
       }
 
       const data = await response.json();
-      setTranscription(data.transcription);
       
       // If video title is returned, show it
       if (data.videoTitle) {
         setTranscription(`${data.videoTitle}\n\n${data.transcription}`);
       } else {
         setTranscription(data.transcription);
+      }
+
+      // Set transcription ID if available
+      if (data.transcriptionId) {
+        setTranscriptionId(data.transcriptionId);
       }
     } catch (error) {
       setTranscription(`Error: ${error.message || 'Failed to process YouTube video'}`);
@@ -200,6 +210,23 @@ function App() {
       setIsTranscribing(false);
       setProcessingYoutube(false);
     }
+  };
+
+  // Get the API URL for a transcription
+  const getApiUrl = (id) => {
+    return `http://localhost:8000/transcriptions/${id}`;
+  };
+
+  // Open the transcription in a new window
+  const viewTranscriptionAPI = () => {
+    if (transcriptionId) {
+      window.open(getApiUrl(transcriptionId), '_blank');
+    }
+  };
+
+  // View all transcriptions
+  const viewAllTranscriptions = () => {
+    window.open('http://localhost:8000/transcriptions', '_blank');
   };
 
   return (
@@ -290,7 +317,24 @@ function App() {
                 <div className="loading-spinner"></div>
               </div>
             ) : (
-              <p>{transcription || "No transcription available. Upload a file or provide a YouTube URL to begin."}</p>
+              <>
+                <p>{transcription || "No transcription available. Upload a file or provide a YouTube URL to begin."}</p>
+                {transcriptionId && (
+                  <div className="transcription-info">
+                    <p className="transcription-id">
+                      Transcription ID: <code>{transcriptionId}</code>
+                    </p>
+                    <div className="api-buttons">
+                      <button onClick={viewTranscriptionAPI} className="api-button">
+                        View this Transcription API
+                      </button>
+                      <button onClick={viewAllTranscriptions} className="api-button">
+                        View All Transcriptions
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
