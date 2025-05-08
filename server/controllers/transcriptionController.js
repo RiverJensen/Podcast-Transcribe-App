@@ -22,6 +22,13 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Make sure default data exists on server startup
+transcriptionService.ensureDefaultSampleExists().then(() => {
+    console.log('Default transcription sample checked/created');
+}).catch(error => {
+    console.error('Error ensuring default sample:', error);
+});
+
 /**
  * Transcribe audio/video file
  * @param {Object} req - Express request object

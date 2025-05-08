@@ -59,6 +59,23 @@ CREATE POLICY "Allow authenticated update" ON transcriptions
 
 CREATE POLICY "Allow authenticated delete" ON transcriptions
   FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Add a default sample transcription
+INSERT INTO transcriptions (
+  id, 
+  title, 
+  source_type, 
+  source_name, 
+  text, 
+  created_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000000', 
+  'Sample Transcription', 
+  'sample', 
+  'Default Sample Data',
+  'This is a test transcription for the API. This default data ensures that the API always returns at least one transcription record. This sample represents what a real transcription would look like after processing an audio file or YouTube video.',
+  NOW()
+);
 ```
 
 3. Run the query to create the table and set up security
