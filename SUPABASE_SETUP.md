@@ -90,7 +90,7 @@ INSERT INTO transcriptions (
 OPENAI_API_KEY=your_openai_api_key_here
 
 # Server Port
-PORT=3002
+PORT=3000
 
 # Supabase Credentials
 SUPABASE_URL=your_supabase_url_here

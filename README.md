@@ -1,53 +1,61 @@
 # Podcast Transcription App
 
-A React-based web application that allows users to upload audio files and get transcriptions of their content.
+A web application for transcribing podcast audio and video files using AI.
 
 ## Features
 
-- Drag and drop audio file upload
-- File type validation
-- Real-time transcription status
-- Clean and intuitive user interface
-- Responsive design
-
-## Technologies Used
-
-- React
-- CSS3
-- HTML5
+- Upload audio or video files for transcription
+- Transcribe YouTube videos by URL
+- Display audio waveforms and video playback
+- Store and retrieve transcriptions
+- Search through transcription content
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v14 or higher)
-- npm (v6 or higher)
+- Node.js (v14 or later)
+- npm or yarn
+- OpenAI API key
 
 ### Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/podcast-transcribe-app.git
-```
-
+1. Clone the repository
 2. Install dependencies:
+
 ```bash
-cd podcast-transcribe-app
 npm install
 ```
 
-3. Start the development server:
+3. Create a `.env` file with the following:
+
+```
+OPENAI_API_KEY=your_openai_api_key_here
+PORT=3000
+```
+
+4. Start the server:
+
 ```bash
 npm start
 ```
 
-The app will be available at `http://localhost:3000`
+5. Open your browser to [http://localhost:3000](http://localhost:3000)
 
-## Usage
+## Using the App
 
-1. Drag and drop an audio file into the upload zone or click to select a file
-2. Wait for the transcription process to complete
-3. View the transcribed text in the results section
+1. Upload an audio/video file or enter a YouTube URL
+2. Wait for the transcription to complete
+3. View and interact with the transcription results
+4. Access your transcription history
+
+## API Endpoints
+
+- `GET /api/transcription` - Get all transcriptions
+- `GET /api/transcription/:id` - Get a specific transcription
+- `POST /api/transcription` - Upload and transcribe a file
+- `POST /api/transcription/youtube` - Transcribe from YouTube URL
+- `DELETE /api/transcription/:id` - Delete a transcription
 
 ## Contributing
 

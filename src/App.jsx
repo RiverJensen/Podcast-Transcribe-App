@@ -131,7 +131,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:3002/api/transcription', {
+      const response = await fetch('http://localhost:3000/api/transcription', {
         method: 'POST',
         body: formData
       });
@@ -177,7 +177,7 @@ function App() {
     setTranscriptionId(null);
 
     try {
-      const response = await fetch('http://localhost:3002/api/transcription/youtube', {
+      const response = await fetch('http://localhost:3000/api/transcription/youtube', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +215,7 @@ function App() {
   // Get all transcriptions
   const getAllTranscriptions = async () => {
     try {
-      const response = await fetch('http://localhost:3002/api/transcription');
+      const response = await fetch('http://localhost:3000/api/transcription');
       if (!response.ok) {
         throw new Error('Failed to fetch transcriptions');
       }
@@ -230,7 +230,7 @@ function App() {
   // Get a single transcription by ID
   const getTranscription = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3002/api/transcription/${id}`);
+      const response = await fetch(`http://localhost:3000/api/transcription/${id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch transcription');
       }
@@ -289,7 +289,7 @@ function App() {
                   <div class="preview">
                     ${t.text.substring(0, 150)}${t.text.length > 150 ? '...' : ''}
                   </div>
-                  <a href="http://localhost:3002/api/transcription/${t.id}" target="_blank" class="view-btn">
+                  <a href="http://localhost:3000/api/transcription/${t.id}" target="_blank" class="view-btn">
                     View Full Transcription
                   </a>
                 </div>
