@@ -1,66 +1,74 @@
 # Podcast Transcription App
 
-A web application for transcribing podcast audio and video files using AI.
+A web application for transcribing audio and video files using OpenAI's Whisper API.
 
 ## Features
 
-- Upload audio or video files for transcription (up to 50MB)
-- Transcribe YouTube videos by URL (up to 20 minutes)
-- Display audio waveforms and video playback
-- Store and retrieve transcriptions
-- Search through transcription content
+- Upload and transcribe audio/video files
+- Transcribe YouTube videos by URL
+- Visualize audio with waveforms using WaveSurfer.js
+- Play video files with native video controls
+- Store transcriptions in Supabase database
+- View and manage transcription history
 
-## Getting Started
+## Project Structure
 
-### Prerequisites
+- **Frontend**: React.js application with two-page structure
+- **Backend**: Node.js/Express server with modular architecture
+- **Storage**: Supabase SQL database
+- **Transcription**: OpenAI Whisper API
 
-- Node.js (v14 or later)
-- npm or yarn
-- OpenAI API key
+## Setup Instructions
 
-### Installation
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/podcast-transcribe-app.git
+   cd podcast-transcribe-app
+   ```
 
-1. Clone the repository
 2. Install dependencies:
+   ```
+   npm install
+   ```
 
-```bash
-npm install
-```
+3. Create `.env` file in the root directory with the following variables:
+   ```
+   OPENAI_API_KEY=your_openai_api_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_key
+   ```
 
-3. Create a `.env` file with the following:
+4. Add a test video:
+   - Create directories: `public/TestVideo/` and `TestVideo/`
+   - Add a test video file named `RPReplay_Final1701485574.mov` to both directories
+   - The app is configured to use this specific file for testing purposes
 
-```
-OPENAI_API_KEY=your_openai_api_key_here
-PORT=3000
-```
-
-4. Start the server:
-
-```bash
-npm start
-```
-
-5. Open your browser to [http://localhost:3000](http://localhost:3000)
+5. Start the application:
+   ```
+   npm run dev
+   ```
 
 ## Using the App
 
-1. Upload an audio/video file or enter a YouTube URL
-2. Wait for the transcription to complete
-3. View and interact with the transcription results
-4. Access your transcription history
+### Upload Page
+- Drag and drop audio/video files or click to browse
+- Enter YouTube URL for transcription
+- Click "Use Test Video" to use the default test video
 
-## API Endpoints
+### Editor Page
+- View the uploaded media (video player or audio waveform)
+- Control playback with play/pause button or native controls
+- View the transcription as it processes
+- Access transcription details and history
 
-- `GET /api/transcription` - Get all transcriptions
-- `GET /api/transcription/:id` - Get a specific transcription
-- `POST /api/transcription` - Upload and transcribe a file
-- `POST /api/transcription/youtube` - Transcribe from YouTube URL
-- `DELETE /api/transcription/:id` - Delete a transcription
+## Development Mode
 
-## Contributing
+In development mode (NODE_ENV=development), the app automatically redirects to the editor page with the test video loaded for convenience during development.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Supabase Integration
+
+For information on Supabase setup, refer to [SUPABASE_SETUP.md](SUPABASE_SETUP.md).
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+MIT 
