@@ -2,6 +2,9 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import "./App.css";
 import WaveSurfer from "wavesurfer.js";
 
+// Add a default test video for development
+const TEST_VIDEO_PATH = "/TestVideo/RPReplay_Final1701485574.mov";
+
 function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -12,6 +15,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
   const [processingYoutube, setProcessingYoutube] = useState(false);
+  const [useTestVideo, setUseTestVideo] = useState(false);
   const waveformRef = useRef(null);
   const wavesurfer = useRef(null);
   const videoRef = useRef(null);
@@ -55,6 +59,23 @@ function App() {
     };
   }, []);
 
+  // Add event listeners for video
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.addEventListener('play', () => setIsPlaying(true));
+      videoRef.current.addEventListener('pause', () => setIsPlaying(false));
+      videoRef.current.addEventListener('ended', () => setIsPlaying(false));
+    }
+    
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.removeEventListener('play', () => setIsPlaying(true));
+        videoRef.current.removeEventListener('pause', () => setIsPlaying(false));
+        videoRef.current.removeEventListener('ended', () => setIsPlaying(false));
+      }
+    };
+  }, [videoRef.current]);
+
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -68,12 +89,14 @@ function App() {
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
+    setUseTestVideo(false);
     
     const file = e.dataTransfer.files[0];
     if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+      const isVideoFile = file.type.startsWith('video/');
       setSelectedFile(file);
-      setIsVideo(file.type.startsWith('video/'));
-      handleFileLoad(file);
+      setIsVideo(isVideoFile);
+      handleFileLoad(file, isVideoFile);
     } else {
       alert('Please upload an audio or video file');
     }
@@ -81,27 +104,57 @@ function App() {
 
   const handleFileSelect = useCallback((e) => {
     const file = e.target.files[0];
+    setUseTestVideo(false);
+    
     if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
+      const isVideoFile = file.type.startsWith('video/');
       setSelectedFile(file);
-      setIsVideo(file.type.startsWith('video/'));
-      handleFileLoad(file);
+      setIsVideo(isVideoFile);
+      handleFileLoad(file, isVideoFile);
     } else {
       alert('Please upload an audio or video file');
     }
   }, []);
 
-  const handleFileLoad = (file) => {
+  const handleFileLoad = (file, isVideoFile) => {
     const mediaUrl = URL.createObjectURL(file);
-    if (isVideo) {
+    
+    if (isVideoFile) {
       if (videoRef.current) {
         videoRef.current.src = mediaUrl;
+        // Ensure video is loaded
+        videoRef.current.load();
       }
     } else {
       if (wavesurfer.current) {
         wavesurfer.current.load(mediaUrl);
       }
     }
+    
     startTranscription(file);
+  };
+
+  const loadTestVideo = () => {
+    setUseTestVideo(true);
+    setIsVideo(true);
+    setSelectedFile({name: "Sample Test Video (RPReplay_Final1701485574.mov)"});
+    
+    if (videoRef.current) {
+      videoRef.current.src = TEST_VIDEO_PATH;
+      videoRef.current.load();
+    }
+    
+    // Create a synthetic file object from the test video
+    fetch(TEST_VIDEO_PATH)
+      .then(response => response.blob())
+      .then(blob => {
+        const file = new File([blob], "RPReplay_Final1701485574.mov", { type: "video/quicktime" });
+        startTranscription(file);
+      })
+      .catch(error => {
+        console.error("Error loading test video:", error);
+        setTranscription("Error loading test video. Please try uploading manually.");
+      });
   };
 
   const togglePlayPause = () => {
@@ -380,6 +433,12 @@ function App() {
                   style={{ display: 'none' }}
                 />
               </div>
+              <button 
+                onClick={loadTestVideo} 
+                className="test-video-btn"
+              >
+                Use Test Video
+              </button>
             </div>
 
             <div className="upload-section">
@@ -413,7 +472,9 @@ function App() {
                 <video
                   ref={videoRef}
                   className="video-player"
-                  controls={false}
+                  controls={true}
+                  playsInline
+                  preload="auto"
                 />
               </div>
             ) : (
