@@ -5,10 +5,12 @@ import WaveSurfer from "wavesurfer.js";
 function App() {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [transcription, setTranscription] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
+  const [processingYoutube, setProcessingYoutube] = useState(false);
   const waveformRef = useRef(null);
   const wavesurfer = useRef(null);
   const videoRef = useRef(null);
@@ -127,7 +129,7 @@ function App() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:3001/transcribe', {
+      const response = await fetch('http://localhost:3002/api/transcription', {
         method: 'POST',
         body: formData
       });
@@ -146,6 +148,60 @@ function App() {
     }
   };
 
+  const handleYoutubeUrlChange = (e) => {
+    setYoutubeUrl(e.target.value);
+  };
+
+  const handleYoutubeSubmit = async (e) => {
+    e.preventDefault();
+    if (!youtubeUrl) {
+      alert('Please enter a YouTube URL');
+      return;
+    }
+
+    // Validate YouTube URL
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+    if (!youtubeRegex.test(youtubeUrl)) {
+      alert('Please enter a valid YouTube URL');
+      return;
+    }
+
+    setProcessingYoutube(true);
+    setIsTranscribing(true);
+    setTranscription("Processing YouTube video and transcribing...");
+
+    try {
+      const response = await fetch('http://localhost:3002/api/transcription/youtube', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ youtubeUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process YouTube video');
+      }
+
+      const data = await response.json();
+      setTranscription(data.transcription);
+      
+      // If video title is returned, show it
+      if (data.videoTitle) {
+        setTranscription(`${data.videoTitle}\n\n${data.transcription}`);
+      } else {
+        setTranscription(data.transcription);
+      }
+    } catch (error) {
+      setTranscription(`Error: ${error.message || 'Failed to process YouTube video'}`);
+      console.error("YouTube processing error:", error);
+    } finally {
+      setIsTranscribing(false);
+      setProcessingYoutube(false);
+    }
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -153,28 +209,55 @@ function App() {
       </header>
       <main className="App-main">
         <div className="audio-upload">
-          <h2>Media File Drop</h2>
-          <div 
-            className={`drop-zone ${isDragging ? 'dragging' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById('file-input').click()}
-          >
-            {selectedFile ? (
-              <p>Selected file: {selectedFile.name}</p>
-            ) : (
-              <p>Drag and drop an audio or video file here or click to upload.</p>
-            )}
-            <input
-              id="file-input"
-              type="file"
-              accept="audio/*,video/*"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-            />
+          <h2>Upload Media</h2>
+          <div className="upload-options">
+            <div className="upload-section">
+              <h3>Option 1: Upload File</h3>
+              <div 
+                className={`drop-zone ${isDragging ? 'dragging' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => document.getElementById('file-input').click()}
+              >
+                {selectedFile ? (
+                  <p>Selected file: {selectedFile.name}</p>
+                ) : (
+                  <p>Drag and drop an audio or video file here or click to upload.</p>
+                )}
+                <input
+                  id="file-input"
+                  type="file"
+                  accept="audio/*,video/*"
+                  onChange={handleFileSelect}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+
+            <div className="upload-section">
+              <h3>Option 2: YouTube URL</h3>
+              <form onSubmit={handleYoutubeSubmit} className="youtube-form">
+                <input
+                  type="text"
+                  placeholder="Paste YouTube URL here"
+                  value={youtubeUrl}
+                  onChange={handleYoutubeUrlChange}
+                  className="youtube-input"
+                  disabled={processingYoutube}
+                />
+                <button 
+                  type="submit" 
+                  className="youtube-submit-btn"
+                  disabled={!youtubeUrl || processingYoutube}
+                >
+                  {processingYoutube ? 'Processing...' : 'Transcribe'}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
+
         <div className="media-controls">
           <h2>{isVideo ? 'Video Player' : 'Audio Waveform'}</h2>
           <div className="media-container">
@@ -192,7 +275,7 @@ function App() {
             <button 
               className="play-button"
               onClick={togglePlayPause}
-              disabled={!selectedFile}
+              disabled={!selectedFile && !processingYoutube}
             >
               {isPlaying ? 'Pause' : 'Play'}
             </button>
@@ -207,7 +290,7 @@ function App() {
                 <div className="loading-spinner"></div>
               </div>
             ) : (
-              <p>{transcription || "No transcription available. Upload a file to begin."}</p>
+              <p>{transcription || "No transcription available. Upload a file or provide a YouTube URL to begin."}</p>
             )}
           </div>
         </div>
