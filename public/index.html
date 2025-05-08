@@ -481,20 +481,27 @@
                     const formData = new FormData();
                     formData.append('file', file);
 
+                    console.log("Sending file for transcription, size:", file.size, "bytes");
+                    
                     const apiResponse = await fetch('/api/transcription', {
                         method: 'POST',
                         body: formData
                     });
 
+                    const data = await apiResponse.json();
+                    
                     if (!apiResponse.ok) {
-                        throw new Error('Transcription failed');
+                        throw new Error(data.error + ": " + data.details || 'Transcription failed');
                     }
 
-                    const data = await apiResponse.json();
                     setTranscription(data.transcription);
                 } catch (error) {
-                    setTranscription("Error during transcription. Please try again.");
                     console.error("Transcription error:", error);
+                    if (error.message) {
+                        setTranscription("Error: " + error.message);
+                    } else {
+                        setTranscription("Error during transcription. Please try a smaller file or check your connection.");
+                    }
                 } finally {
                     setIsTranscribing(false);
                 }
@@ -526,7 +533,10 @@
                                         <video
                                             ref={videoRef}
                                             className="video-player"
-                                            controls={false}
+                                            controls={true}
+                                            controlsList="nodownload"
+                                            playsInline
+                                            preload="metadata"
                                         />
                                     </div>
                                 ) : (
