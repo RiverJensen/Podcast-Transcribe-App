@@ -4,8 +4,8 @@ A web application for transcribing podcast audio and video files using AI.
 
 ## Features
 
-- Upload audio or video files for transcription
-- Transcribe YouTube videos by URL
+- Upload audio or video files for transcription (up to 50MB)
+- Transcribe YouTube videos by URL (up to 20 minutes)
 - Display audio waveforms and video playback
 - Store and retrieve transcriptions
 - Search through transcription content

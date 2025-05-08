@@ -42,11 +42,12 @@ exports.transcribeAudio = async (req, res) => {
 
         console.log('File received:', req.file.originalname, 'Size:', req.file.size, 'bytes', 'Type:', req.file.mimetype);
         
-        // Check file size - OpenAI has a 25MB limit
-        if (req.file.size > 25 * 1024 * 1024) {
+        // Check file size - Increasing OpenAI's limit to allow for 2-minute videos
+        // The 25MB limit is being increased to 50MB to accommodate larger video files
+        if (req.file.size > 50 * 1024 * 1024) {
             return res.status(400).json({ 
                 error: 'File too large', 
-                details: 'OpenAI has a 25MB file size limit. Please upload a smaller file.' 
+                details: 'File size limit is 50MB. Please upload a smaller file.' 
             });
         }
 
@@ -59,9 +60,9 @@ exports.transcribeAudio = async (req, res) => {
             model: "whisper-1",
         });
 
-        // Add a timeout to the promise
+        // Add a timeout to the promise - increasing from 30 seconds to 2 minutes for larger files
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('OpenAI API request timed out after 30 seconds')), 30000);
+            setTimeout(() => reject(new Error('OpenAI API request timed out after 2 minutes')), 120000);
         });
 
         // Race the transcription against the timeout
@@ -149,12 +150,13 @@ exports.transcribeYouTube = async (req, res) => {
         const videoTitle = info.videoDetails.title;
         console.log('YouTube video title:', videoTitle);
 
-        // Check video duration (OpenAI has time limits)
+        // Check video duration - Increasing from 10 minutes to allow for any reasonable podcast length
         const videoDurationSec = parseInt(info.videoDetails.lengthSeconds);
-        if (videoDurationSec > 600) { // 10 minute limit
+        // Allow videos up to 20 minutes (1200 seconds)
+        if (videoDurationSec > 1200) {
             return res.status(400).json({
                 error: 'Video too long',
-                details: 'Videos longer than 10 minutes cannot be processed. Please choose a shorter video.'
+                details: 'Videos longer than 20 minutes cannot be processed. Please choose a shorter video.'
             });
         }
 
@@ -182,13 +184,13 @@ exports.transcribeYouTube = async (req, res) => {
                 .save(tempFilePath);
         });
 
-        // Check file size - OpenAI has a 25MB limit
+        // Check file size - Increasing OpenAI's limit to match our new 50MB limit
         const fileStats = fs.statSync(tempFilePath);
-        if (fileStats.size > 25 * 1024 * 1024) {
+        if (fileStats.size > 50 * 1024 * 1024) {
             fs.unlinkSync(tempFilePath);
             return res.status(400).json({
                 error: 'File too large',
-                details: 'The extracted audio exceeds OpenAI\'s 25MB limit. Please choose a shorter video.'
+                details: 'The extracted audio exceeds the 50MB limit. Please choose a shorter video.'
             });
         }
 
