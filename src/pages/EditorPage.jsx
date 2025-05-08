@@ -1,28 +1,26 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import "./App.css";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import WaveSurfer from "wavesurfer.js";
-import UploadPage from "./pages/UploadPage";
-import EditorPage from "./pages/EditorPage";
 
-// For development: check if we should auto-redirect to editor
-const isDev = process.env.NODE_ENV === 'development';
+// Add a default test video for development
+const TEST_VIDEO_PATH = "/TestVideo/RPReplay_Final1701485574.mov";
 
-function App() {
-  const [isDragging, setIsDragging] = useState(false);
+function EditorPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [selectedFile, setSelectedFile] = useState(null);
-  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [transcription, setTranscription] = useState("");
   const [transcriptionId, setTranscriptionId] = useState(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
-  const [processingYoutube, setProcessingYoutube] = useState(false);
   const [useTestVideo, setUseTestVideo] = useState(false);
   const waveformRef = useRef(null);
   const wavesurfer = useRef(null);
   const videoRef = useRef(null);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
 
+  // Set up WaveSurfer
   useEffect(() => {
     if (waveformRef.current) {
       wavesurfer.current = WaveSurfer.create({
@@ -40,6 +38,7 @@ function App() {
 
       wavesurfer.current.on('ready', () => {
         console.log('Waveform is ready');
+        setMediaLoaded(true);
       });
 
       wavesurfer.current.on('audioprocess', () => {
@@ -65,6 +64,7 @@ function App() {
   // Add event listeners for video
   useEffect(() => {
     if (videoRef.current) {
+      videoRef.current.addEventListener('loadedmetadata', () => setMediaLoaded(true));
       videoRef.current.addEventListener('play', () => setIsPlaying(true));
       videoRef.current.addEventListener('pause', () => setIsPlaying(false));
       videoRef.current.addEventListener('ended', () => setIsPlaying(false));
@@ -72,6 +72,7 @@ function App() {
     
     return () => {
       if (videoRef.current) {
+        videoRef.current.removeEventListener('loadedmetadata', () => setMediaLoaded(true));
         videoRef.current.removeEventListener('play', () => setIsPlaying(true));
         videoRef.current.removeEventListener('pause', () => setIsPlaying(false));
         videoRef.current.removeEventListener('ended', () => setIsPlaying(false));
@@ -79,63 +80,50 @@ function App() {
     };
   }, [videoRef.current]);
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    setUseTestVideo(false);
-    
-    const file = e.dataTransfer.files[0];
-    if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
-      const isVideoFile = file.type.startsWith('video/');
-      setSelectedFile(file);
-      setIsVideo(isVideoFile);
-      handleFileLoad(file, isVideoFile);
-    } else {
-      alert('Please upload an audio or video file');
-    }
-  }, []);
-
-  const handleFileSelect = useCallback((e) => {
-    const file = e.target.files[0];
-    setUseTestVideo(false);
-    
-    if (file && (file.type.startsWith('audio/') || file.type.startsWith('video/'))) {
-      const isVideoFile = file.type.startsWith('video/');
-      setSelectedFile(file);
-      setIsVideo(isVideoFile);
-      handleFileLoad(file, isVideoFile);
-    } else {
-      alert('Please upload an audio or video file');
-    }
-  }, []);
-
-  const handleFileLoad = (file, isVideoFile) => {
-    const mediaUrl = URL.createObjectURL(file);
-    
-    if (isVideoFile) {
-      if (videoRef.current) {
-        videoRef.current.src = mediaUrl;
-        // Ensure video is loaded
-        videoRef.current.load();
+  // Process location state on component mount
+  useEffect(() => {
+    // Check for the state passed from the UploadPage
+    if (location.state) {
+      if (location.state.useTestVideo) {
+        loadTestVideo();
+      } else if (location.state.file) {
+        const { file } = location.state;
+        setSelectedFile({ name: file.name });
+        setIsVideo(file.isVideo);
+        
+        if (file.isVideo) {
+          if (videoRef.current) {
+            videoRef.current.src = file.url;
+            videoRef.current.load();
+          }
+        } else {
+          if (wavesurfer.current) {
+            wavesurfer.current.load(file.url);
+          }
+        }
+        
+        // Auto-start transcription for uploaded files
+        if (location.state.source === "upload") {
+          // We need to fetch the file again because we only passed metadata through navigation
+          fetch(file.url)
+            .then(response => response.blob())
+            .then(blob => {
+              const fileObj = new File([blob], file.name, { type: file.type });
+              startTranscription(fileObj);
+            })
+            .catch(error => {
+              console.error("Error loading file for transcription:", error);
+              setTranscription("Error loading file. Please try uploading again.");
+            });
+        }
+      } else if (location.state.youtubeUrl) {
+        handleYoutubeTranscription(location.state.youtubeUrl);
       }
     } else {
-      if (wavesurfer.current) {
-        wavesurfer.current.load(mediaUrl);
-      }
+      // If no state is provided, default to loading the test video
+      loadTestVideo();
     }
-    
-    startTranscription(file);
-  };
+  }, [location]);
 
   const loadTestVideo = () => {
     setUseTestVideo(true);
@@ -209,25 +197,7 @@ function App() {
     }
   };
 
-  const handleYoutubeUrlChange = (e) => {
-    setYoutubeUrl(e.target.value);
-  };
-
-  const handleYoutubeSubmit = async (e) => {
-    e.preventDefault();
-    if (!youtubeUrl) {
-      alert('Please enter a YouTube URL');
-      return;
-    }
-
-    // Validate YouTube URL
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
-    if (!youtubeRegex.test(youtubeUrl)) {
-      alert('Please enter a valid YouTube URL');
-      return;
-    }
-
-    setProcessingYoutube(true);
+  const handleYoutubeTranscription = async (youtubeUrl) => {
     setIsTranscribing(true);
     setTranscription("Processing YouTube video and transcribing...");
     setTranscriptionId(null);
@@ -264,7 +234,6 @@ function App() {
       console.error("YouTube processing error:", error);
     } finally {
       setIsTranscribing(false);
-      setProcessingYoutube(false);
     }
   };
 
@@ -406,21 +375,72 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="App">
-        <header className="App-header">
-          Podcast to Transcribe App
-        </header>
-        <main className="App-main">
-          <Routes>
-            <Route path="/" element={isDev ? <Navigate to="/editor" /> : <UploadPage />} />
-            <Route path="/editor" element={<EditorPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
+    <div>
+      <button 
+        className="back-button" 
+        onClick={() => navigate("/")}
+      >
+        Back to Upload
+      </button>
+      
+      <div className="media-controls">
+        <h2>{isVideo ? 'Video Player' : 'Audio Waveform'}</h2>
+        <div className="media-container">
+          {isVideo ? (
+            <div className="video-container">
+              <video
+                ref={videoRef}
+                className="video-player"
+                controls={true}
+                playsInline
+                preload="auto"
+              />
+            </div>
+          ) : (
+            <div ref={waveformRef} className="waveform"></div>
+          )}
+          <button 
+            className="play-button"
+            onClick={togglePlayPause}
+            disabled={!mediaLoaded}
+          >
+            {isPlaying ? 'Pause' : 'Play'}
+          </button>
+        </div>
       </div>
-    </Router>
+      
+      <div className="transcription">
+        <h2>Transcribed Text</h2>
+        <div className="transcription-text">
+          {isTranscribing ? (
+            <div className="transcribing-indicator">
+              <p>Transcribing...</p>
+              <div className="loading-spinner"></div>
+            </div>
+          ) : (
+            <>
+              <p>{transcription || "No transcription available. Upload a file or provide a YouTube URL to begin."}</p>
+              {transcriptionId && (
+                <div className="transcription-info">
+                  <p className="transcription-id">
+                    Transcription ID: <code>{transcriptionId}</code>
+                  </p>
+                  <div className="api-buttons">
+                    <button onClick={viewTranscription} className="api-button">
+                      View This Transcription
+                    </button>
+                    <button onClick={viewAllTranscriptions} className="api-button">
+                      View All Transcriptions
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
-export default App;
+export default EditorPage; 
